@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MATHGEN — Years 10–12 Past-Paper Practice</title>
+<link rel="stylesheet" href="styles.css">
+<script src="js/theme-bg.js"></script>
+</head>
+<body>
+<div id="math-bg" aria-hidden="true"></div>
+<div id="grain" aria-hidden="true"></div>
+<div id="scroll-progress" aria-hidden="true"></div>
+<header>
+  <div class="brand">MATHGEN</div>
+  <div class="tagline">YEARS 10–12 · PAST-PAPER PRACTICE</div>
+  <button id="theme-toggle" title="Toggle theme" aria-label="Toggle theme">◐</button>
+</header>
+<section class="hero">
+  <h1>YEARS 10–12 · PAST-PAPER PRACTICE</h1>
+  <div class="features" aria-label="Practice index">
+    <span><b>∞ QUESTION TYPES</b><span id="gen-count">–</span></span>
+    <span><b>CHECK</b>INSTANT</span>
+    <span><b>SOLUTIONS</b>WORKED</span>
+  </div>
+</section>
+<section id="menu-page" aria-label="Test selection">
+  <div class="menu-head">
+    <h2 class="menu-title">SELECT A PRACTICE TEST</h2>
+    <p class="menu-sub">Maximum difficulty by default. Choose a topic for practice or a printable worksheet. Your difficulty choice is remembered.</p>
+  </div>
+  <h3 class="menu-heading">FEATURED</h3>
+  <div id="menu-featured" class="menu-grid menu-featured"></div>
+  <h3 class="menu-heading">TOPIC PAPERS</h3>
+  <div id="menu-grid" class="menu-grid"></div>
+</section>
+<div class="layout" id="practice-page" hidden>
+  <aside class="panel">
+    <button id="back-menu" class="back-btn" title="Back to test selection">← ALL TESTS</button>
+    <h2>TOPICS</h2>
+    <nav id="topics"></nav>
+    <div class="filter-group">
+      <label for="subtopics">SUBTOPIC</label>
+      <select id="subtopics"></select>
+    </div>
+    <div class="filter-group">
+      <label>DIFFICULTY</label>
+      <div class="diff-row">
+        <button class="diff-btn" data-diff="0">ANY</button><button class="diff-btn" data-diff="1" aria-label="Difficulty 1">★</button><button class="diff-btn" data-diff="2" aria-label="Difficulty 2">★★</button><button class="diff-btn" data-diff="3" aria-label="Difficulty 3">★★★</button><button class="diff-btn active" data-diff="4" title="Maximum difficulty: multi-step reasoning">♛ BOSS</button>
+      </div>
+      <p class="hint">Boss = maximum difficulty. No easier questions are mixed in.</p>
+    </div>
+    <div class="filter-group">
+      <label for="worksheet-count">WORKSHEET LENGTH</label>
+      <select id="worksheet-count"><option value="6">6 questions</option><option value="12">12 questions</option><option value="20">20 questions</option></select>
+      <button id="worksheet-create" class="btn worksheet-create">Create worksheet →</button>
+    </div>
+  </aside>
+  <main id="question-card"></main>
+  <aside class="panel">
+    <h2>YOUR PROGRESS</h2>
+    <div id="stats"></div>
+    <button id="reset-stats" class="btn btn-ghost btn-small">RESET PROGRESS</button>
+  </aside>
+</div>
+<section id="worksheet-page" hidden aria-label="Printable worksheet">
+  <div class="worksheet-toolbar">
+    <button id="worksheet-back" class="btn">← Practice</button>
+    <button id="worksheet-new" class="btn">New worksheet</button>
+    <label><input id="worksheet-solutions" type="checkbox"> Include worked solutions</label>
+    <button id="worksheet-print" class="btn btn-primary">Print / Save PDF</button>
+  </div>
+  <div id="worksheet-content"></div>
+</section>
+<footer class="site-footer">
+  <div class="f-grid">
+    <div class="f-col f-brand">
+      <div class="f-logo">MATHGEN</div>
+      <p class="f-note">Procedurally generated Years 10–12 past-paper practice. Every question is built fresh from data — <span id="f-gen-count">&nbsp;</span> generators and counting.</p>
+    </div>
+    <div class="f-col">
+      <h3>TOPICS</h3>
+      <ul id="f-topics"><li>Loading…</li></ul>
+    </div>
+    <div class="f-col">
+      <h3>PRACTICE</h3>
+      <ul>
+        <li>Difficulty ★ – ★★★</li>
+        <li>♛ Boss multi-part chains</li>
+        <li>Instant answer checking</li>
+        <li>Worked solutions + hints</li>
+      </ul>
+    </div>
+    <div class="f-col">
+      <h3>SHORTCUTS</h3>
+      <ul>
+        <li><kbd>Enter</kbd> — send answer</li>
+        <li>Hint — one step at a time</li>
+        <li>◐ — light / dark</li>
+      </ul>
+    </div>
+  </div>
+  <div class="f-bottom"><span>MATHGEN</span><span class="f-sep">/</span><span>MONOCHROME EDITION</span><span class="f-sep">/</span><span>NSW · STAGES 5–6</span></div>
+</footer>
+<script src="js/util.js"></script>
+<script src="js/diagrams.js"></script>
+<script src="js/gen-algebra.js"></script>
+<script src="js/gen-geometry.js"></script>
+<script src="js/gen-advgeo.js"></script>
+<script src="js/gen-trig.js"></script>
+<script src="js/gen-stats.js"></script>
+<script src="js/gen-advanced.js"></script>
+<script src="js/gen-challenge.js"></script>
+<script src="js/gen-hard.js"></script>
+<script src="js/gen-boss.js"></script>
+	<script src="js/gen-boss2.js"></script>
+	<script src="js/gen-boss3.js"></script>
+	<script src="js/gen-boss4.js"></script>
+	<script src="js/gen-boss5.js"></script>
+	<script src="js/gen-boss6.js"></script>
+	<script src="js/gen-boss7.js"></script>
+	<script src="js/gen-boss8.js"></script>
+	<script src="js/gen-seqser.js"></script>
+	<script src="js/gen-curvesketch.js"></script>
+	<script src="js/gen-invfunc.js"></script>
+	<script src="js/gen-quadtheory.js"></script>
+	<script src="js/gen-locus.js"></script>
+	<script src="js/gen-regions.js"></script>
+	<script src="js/gen-trigplus.js"></script>
+	<script src="js/gen-exam.js"></script>
+	<script src="js/gen-boss9.js"></script>
+	<script src="js/gen-boss10.js"></script>
+	<script src="js/gen-sketch.js"></script>
+<script src="js/gen-spatial.js"></script>
+<script src="js/gen-probability-plus.js"></script>
+<script src="js/gen-distributions.js"></script>
+<script src="js/app.js"></script>
+<script src="js/ui-motion.js"></script>
+</body>
+</html>
