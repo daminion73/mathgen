@@ -182,7 +182,9 @@
 			? `<span class="avatar">∑</span><div class="bubble-body">${html}</div>`
 			: `<div class="bubble-body">${html}</div>`;
 		chatEl.appendChild(el);
-		if (el.scrollIntoView) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+		// Moving the page while a sketch is being drawn shifts the canvas under
+		// the pointer, especially when delayed feedback arrives after Clear.
+		if (el.scrollIntoView && state.current?.q.answer.type !== 'sketch') el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 		return el;
 	}
 
@@ -387,25 +389,51 @@
 	function clearSketch() {
 		SK.strokes = [];
 		$$('#sketch-pad svg .user-stroke').forEach((p) => p.remove());
+		$('#sketch-pad').classList.remove('shake');
+		$('#sketch-features').classList.remove('shake');
 		$('#sketch-feedback').textContent = '';
+	}
+
+	function sketchFields(a) {
+		const asymptotes = a.asymptotes || {}, fields = [];
+		if (asymptotes.vertical?.length) fields.push({ id: 'vertical', label: 'Vertical asymptote x-value(s)', expected: asymptotes.vertical, kind: 'list' });
+		if (asymptotes.horizontal?.length) fields.push({ id: 'horizontal', label: 'Horizontal asymptote y-value(s)', expected: asymptotes.horizontal, kind: 'list' });
+		if (asymptotes.oblique) {
+			fields.push({ id: 'oblique-m', label: 'Oblique asymptote gradient m', expected: asymptotes.oblique[0], kind: 'number' });
+			fields.push({ id: 'oblique-c', label: 'Oblique asymptote intercept c', expected: asymptotes.oblique[1], kind: 'number' });
+		}
+		if (asymptotes.parabolic) {
+			['a', 'b', 'c'].forEach((name, i) => fields.push({ id: `parabolic-${name}`, label: `Parabolic asymptote coefficient ${name}`, expected: asymptotes.parabolic[i], kind: 'number' }));
+		}
+		if (!fields.length) fields.push({ id: 'asymptotes', label: 'Asymptotes', expected: [], kind: 'list' });
+		fields.push({ id: 'x-intercepts', label: 'x-intercept value(s)', expected: a.xIntercepts, kind: 'list' });
+		fields.push({ id: 'y-intercept', label: 'y-intercept value', expected: a.yIntercept === null ? [] : [a.yIntercept], kind: 'list' });
+		return fields;
 	}
 
 	function buildInputBar(q) {
 		const bar = $('#input-bar');
 		const a = q.answer;
 		if (a.type === 'sketch') {
+			const fields = sketchFields(a);
 			bar.innerHTML = `<div class="sketch-wrap">
 				<div class="sketch-pad" id="sketch-pad">${MG.diagram({ type: 'graph', grid: true, xmin: a.xmin, xmax: a.xmax, ymin: a.ymin, ymax: a.ymax, xstep: a.xstep, ystep: a.ystep, degreesAxis: a.degreesAxis })}</div>
-				<div class="sketch-actions">
-					<button id="sketch-clear" class="btn-link">↺ Clear</button>
-					<button id="check-btn" class="btn btn-primary">Check my curve</button>
+				<div class="sketch-features" id="sketch-features">
+					<h3>STATE THE CURVE FEATURES</h3>
+					<div class="sketch-feature-grid">${fields.map((field) => `<label><span>${field.label}</span><input id="sketch-${field.id}" type="text" inputmode="decimal" autocomplete="off" placeholder="${field.kind === 'list' ? 'Comma-separated, or none' : 'Value'}"></label>`).join('')}</div>
+					<p class="hint">Use x-values for x-intercepts and y-values for y-intercepts. Fractions or decimals are accepted.</p>
 				</div>
-				<p class="hint center">Draw only the curve, including every visible x- and y-intercept. Use separate strokes for separate branches; do not draw asymptote guides.</p>
+				<div class="sketch-actions">
+					<button id="sketch-clear" class="btn-link">↺ Clear sketch</button>
+					<button id="check-btn" class="btn btn-primary">Check curve + features</button>
+				</div>
+				<p class="hint center">Draw only the curve. Use separate strokes for separate branches; enter asymptotes below instead of drawing their guide lines.</p>
 				<div id="sketch-feedback" class="hint" role="status" aria-live="polite"></div>
 			</div>`;
 			initSketchPad(a);
 			$('#sketch-clear').addEventListener('click', clearSketch);
 			$('#check-btn').addEventListener('click', check);
+			$$('#sketch-features input').forEach((input) => input.addEventListener('keydown', (e) => { if (e.key === 'Enter') check(); }));
 			return;
 		}
 		if (a.type === 'mc') { bar.innerHTML = `<p class="hint center">Pick an option above.</p>`; return; }
@@ -456,8 +484,42 @@
 		return isNaN(v) ? null : v;
 	}
 
+	function parseSketchList(raw) {
+		const value = (raw || '').trim().toLowerCase();
+		if (/^(none|no|n\/a|∅)$/.test(value)) return [];
+		if (!value) return null;
+		const tokens = value.match(/-?\d+(?:\.\d+)?(?:\s*\/\s*-?\d+(?:\.\d+)?)?/g) || [];
+		const remainder = value.replace(/-?\d+(?:\.\d+)?(?:\s*\/\s*-?\d+(?:\.\d+)?)?/g, '').replace(/[;,\s]/g, '');
+		if (!tokens.length || remainder) return null;
+		return tokens.map(parseNum);
+	}
+
+	function checkSketchFeatures(a) {
+		const tolerance = .035, details = [];
+		for (const field of sketchFields(a)) {
+			const raw = $(`#sketch-${field.id}`).value;
+			if (field.kind === 'number') {
+				const value = parseNum(raw);
+				if (value === null) return null;
+				details.push({ label: field.label, ok: Math.abs(value - field.expected) <= tolerance });
+				continue;
+			}
+			const values = parseSketchList(raw);
+			if (values === null || values.some((value) => value === null)) return null;
+			const remaining = [...field.expected];
+			const ok = values.length === remaining.length && values.every((value) => {
+				const index = remaining.findIndex((expected) => Math.abs(value - expected) <= tolerance);
+				if (index < 0) return false;
+				remaining.splice(index, 1);
+				return true;
+			});
+			details.push({ label: field.label, ok });
+		}
+		return { ok: details.every((detail) => detail.ok), details };
+	}
+
 	function nudgeInput() {
-		const box = $('#chat-input') || $('#sketch-pad');
+		const box = $('#chat-input') || $('#sketch-features') || $('#sketch-pad');
 		if (!box) return;
 		box.classList.remove('shake');
 		void box.offsetWidth;
@@ -488,13 +550,21 @@
 			judge(a.accept.map(normalizeText).includes(v));
 		} else if (a.type === 'sketch') {
 			const res = MG.scoreSketch(a, SK.strokes);
-			if (!res) { nudgeInput(); return; }
+			const features = checkSketchFeatures(a);
+			if (!res || !features) { nudgeInput(); return; }
 			const intercept = (label, result) => `${label}: ${result.total ? `${result.hit}/${result.total} located` : 'none in this window'}${result.extra ? ' — unexpected axis crossing' : ''}`;
 			$('#sketch-feedback').innerHTML = `<p>Curve coverage: ${Math.floor(res.cover * 100)}% (need 85%). Line accuracy: ${Math.floor(res.clean * 100)}% (need 90%).</p>
 				<p>${intercept('X-intercepts', res.x)}. ${intercept('Y-intercept', res.y)}.</p>
-				<p>${!res.branchesOK ? 'A visible branch is missing or incomplete. ' : ''}${!res.x.ok || !res.y.ok ? 'Recheck where your curve crosses or touches each axis. ' : ''}${res.clean < .9 ? 'Remove stray lines or adjust the curve shape. ' : ''}${res.cover < .85 ? 'Extend the curve across the visible plotting area. ' : ''}${res.ok ? 'Curve and intercept checks passed.' : ''}</p>`;
-			bubble('user', '✏️ <em>Submitted curve and intercepts for checking.</em>');
-			judge(res.ok);
+				<p>Entered features: ${features.details.map((detail) => `${detail.label} ${detail.ok ? '✓' : '— check this entry'}`).join('; ')}.</p>
+				<p>${!res.branchesOK ? 'A visible branch is missing or incomplete. ' : ''}${!res.x.ok || !res.y.ok ? 'Recheck where your curve crosses or touches each axis. ' : ''}${res.clean < .9 ? 'Remove stray lines or adjust the curve shape. ' : ''}${res.cover < .85 ? 'Extend the curve across the visible plotting area. ' : ''}${res.ok ? 'Curve and intercept checks passed. ' : ''}${features.ok ? 'Entered asymptotes and intercepts passed.' : 'Recheck the entered curve features.'}</p>`;
+			if (res.ok && features.ok) {
+				bubble('user', '✏️ <em>Submitted curve, asymptotes and intercepts for checking.</em>');
+				judge(true);
+			} else {
+				// Detailed sketch feedback is already visible beside the drawing. Avoid
+				// delayed chat bubbles that can arrive during a clear-and-redraw attempt.
+				bumpStat(state.current.gen.topic, false);
+			}
 		}
 	}
 

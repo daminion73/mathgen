@@ -45,7 +45,7 @@
   function createPit(bg) {
     bg.className = 'symbol-pit';
     const bodies = [];
-    const count = reduced ? 48 : 74;
+    const count = reduced ? 64 : 110;
     for (let i = 0; i < count; i++) {
       const glyph = makeGlyph('pit-glyph');
       const size = 14 + Math.random() * 26;
@@ -78,7 +78,7 @@
               body.vy += dy / distance * force - .12;
             }
           }
-          body.vy += .045;
+          body.vy += .018;
           body.vx *= .982;
           body.vy *= .986;
           body.x += body.vx;
