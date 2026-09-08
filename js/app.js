@@ -17,7 +17,17 @@
 			const saved = localStorage.getItem('mg-difficulty');
 			if (saved !== null && /^[0-4]$/.test(saved)) return Number(saved);
 		} catch { /* storage unavailable */ }
-		return 4;
+		return 0;
+	}
+
+	function setDifficulty(value, persist = true) {
+		state.difficulty = value;
+		if (persist) try { localStorage.setItem('mg-difficulty', String(value)); } catch { /* storage unavailable */ }
+		$$('.diff-btn').forEach((b) => {
+			const active = Number(b.dataset.diff) === value;
+			b.classList.toggle('active', active);
+			b.setAttribute('aria-pressed', String(active));
+		});
 	}
 
 	function loadStats() {
@@ -48,6 +58,7 @@
 		'Functions': 'Inverse functions, domains, composition and parametric elimination.',
 		'Polynomials': 'Remainder and factor theorems, division chains.',
 		'Logarithms': 'Exponential models and logarithm manipulation.',
+		'Set Theory': 'Membership, notation, subsets, power sets, operations and Venn diagrams.',
 		'Probability & Statistics': 'Trees, Venn diagrams, conditional probability and counting.',
 		'Quadratic Theory': 'Sum and product of roots, discriminants and worded optimisation.',
 		'Locus & Coordinate Geometry': 'Parabola loci, tangency, circles and perpendicular distance.',
@@ -102,6 +113,8 @@
 	function startPractice(topic) {
 		state.topic = topic;
 		state.subtopic = 'All';
+		// A topic change must never inherit a restrictive filter from another test.
+		setDifficulty(0);
 		$('#menu-page').hidden = true;
 		$('#worksheet-page').hidden = true;
 		$('#practice-page').hidden = false;
@@ -306,81 +319,75 @@
 
 	// ---------- sketch pad (draw-the-curve questions) ----------
 	// Geometry mirrors R.graph in diagrams.js: viewBox 360x260, padding 34.
-	const SK = { strokes: [], a: null };
+	const SK = { strokes: [] };
 
 	function initSketchPad(a) {
-		SK.strokes = []; SK.a = a;
+		SK.strokes = [];
 		const svg = $('#sketch-pad svg');
 		if (!svg) return;
 		svg.classList.add('sketch-svg');
 		const W = 360, H = 260, pad = 34;
 		const toGraph = (e) => {
-			const r = svg.getBoundingClientRect();
-			const px = (e.clientX - r.left) / (r.width || 1) * W;
-			const py = (e.clientY - r.top) / (r.height || 1) * H;
+			const screen = svg.createSVGPoint();
+			screen.x = e.clientX; screen.y = e.clientY;
+			const { x: px, y: py } = screen.matrixTransform(svg.getScreenCTM().inverse());
 			const x = a.xmin + (px - pad) / (W - 2 * pad) * (a.xmax - a.xmin);
 			const y = a.ymin + (H - pad - py) / (H - 2 * pad) * (a.ymax - a.ymin);
-			return [Math.max(a.xmin, Math.min(a.xmax, x)), Math.max(a.ymin, Math.min(a.ymax, y))];
+			return [x, y];
 		};
+		const inside = ([x, y]) => x >= a.xmin && x <= a.xmax && y >= a.ymin && y <= a.ymax;
 		const toPx = (p) => [pad + (p[0] - a.xmin) / (a.xmax - a.xmin) * (W - 2 * pad), H - pad - (p[1] - a.ymin) / (a.ymax - a.ymin) * (H - 2 * pad)];
-		let cur = null, pathEl = null;
+		let cur = null, pathEl = null, pointer = null;
 		const dOf = (stroke) => stroke.map((p, i) => `${i ? 'L' : 'M'} ${toPx(p)[0].toFixed(1)} ${toPx(p)[1].toFixed(1)}`).join(' ');
 		svg.addEventListener('pointerdown', (e) => {
+			if (cur || e.button !== 0 || state.current.solved) return;
+			const p = toGraph(e);
+			if (!inside(p)) return;
 			e.preventDefault();
-			if (svg.setPointerCapture) { try { svg.setPointerCapture(e.pointerId); } catch { /* jsdom */ } }
-			cur = [toGraph(e)];
+			svg.setPointerCapture(e.pointerId);
+			pointer = e.pointerId;
+			cur = [p];
 			pathEl = document.createElementNS('http://www.w3.org/2000/svg', 'path');
 			pathEl.setAttribute('class', 'user-stroke');
 			pathEl.setAttribute('fill', 'none');
 			svg.appendChild(pathEl);
 		});
-		svg.addEventListener('pointermove', (e) => {
-			if (!cur) return;
-			cur.push(toGraph(e));
-			pathEl.setAttribute('d', dOf(cur));
-		});
 		const finish = () => {
 			if (cur && cur.length >= 2) SK.strokes.push(cur);
 			else if (pathEl) pathEl.remove();
-			cur = null; pathEl = null;
+			cur = null; pathEl = null; pointer = null;
 		};
-		svg.addEventListener('pointerup', finish);
-		svg.addEventListener('pointercancel', finish);
-		svg.addEventListener('pointerleave', finish);
+		const append = (e) => {
+			if (!cur || e.pointerId !== pointer) return;
+			const p = toGraph(e), last = cur[cur.length - 1];
+			if (!inside(p)) {
+				// End at the plot boundary, rather than clamping a whole off-grid stroke.
+				let t = 1;
+				for (const [axis, lo, hi] of [[0, a.xmin, a.xmax], [1, a.ymin, a.ymax]]) {
+					if (p[axis] < lo) t = Math.min(t, (lo - last[axis]) / (p[axis] - last[axis]));
+					if (p[axis] > hi) t = Math.min(t, (hi - last[axis]) / (p[axis] - last[axis]));
+				}
+				cur.push([last[0] + t * (p[0] - last[0]), last[1] + t * (p[1] - last[1])]);
+				pathEl.setAttribute('d', dOf(cur));
+				finish();
+				return;
+			}
+			cur.push(p);
+			pathEl.setAttribute('d', dOf(cur));
+		};
+		svg.addEventListener('pointermove', (e) => {
+			const events = e.getCoalescedEvents?.();
+			for (const event of events?.length ? events : [e]) append(event);
+		});
+		svg.addEventListener('pointerup', (e) => { if (e.pointerId === pointer) { append(e); finish(); } });
+		svg.addEventListener('pointercancel', (e) => { if (e.pointerId === pointer) finish(); });
+		svg.addEventListener('lostpointercapture', (e) => { if (e.pointerId === pointer) finish(); });
 	}
 
 	function clearSketch() {
 		SK.strokes = [];
 		$$('#sketch-pad svg .user-stroke').forEach((p) => p.remove());
-	}
-
-	function scoreSketch(a) {
-		const pts = SK.strokes.flat();
-		if (pts.length < 8) return null; // nothing meaningful drawn yet
-		const tol = (a.tolerance ?? 0.13) * (a.ymax - a.ymin);
-		const dxWin = (a.xmax - a.xmin) / 20;
-		// forward check: the curve must be traced where it is on-screen
-		let need = 0, hit = 0;
-		for (let i = 0; i <= 48; i++) {
-			const x = a.xmin + (a.xmax - a.xmin) * i / 48;
-			const y = a.fn(x);
-			if (!isFinite(y) || y < a.ymin || y > a.ymax) continue;
-			need++;
-			let best = Infinity;
-			for (const p of pts) if (Math.abs(p[0] - x) <= dxWin) best = Math.min(best, Math.abs(p[1] - y));
-			if (best <= tol) hit++;
-		}
-		// reverse check: what was drawn must lie on the curve (no scribbling everywhere)
-		let dNeed = 0, dHit = 0;
-		for (const p of pts) {
-			const y = a.fn(p[0]);
-			if (!isFinite(y) || y < a.ymin - tol || y > a.ymax + tol) continue;
-			dNeed++;
-			if (Math.abs(p[1] - y) <= tol * 1.4) dHit++;
-		}
-		const cover = need ? hit / need : 0;
-		const clean = dNeed ? dHit / dNeed : 0;
-		return { ok: need > 0 && cover >= 0.8 && clean >= 0.7, cover, clean };
+		$('#sketch-feedback').textContent = '';
 	}
 
 	function buildInputBar(q) {
@@ -393,7 +400,8 @@
 					<button id="sketch-clear" class="btn-link">↺ Clear</button>
 					<button id="check-btn" class="btn btn-primary">Check my curve</button>
 				</div>
-				<p class="hint center">Draw the curve on the grid — mouse or finger. Multiple strokes are fine (e.g. two branches).</p>
+				<p class="hint center">Draw only the curve, including every visible x- and y-intercept. Use separate strokes for separate branches; do not draw asymptote guides.</p>
+				<div id="sketch-feedback" class="hint" role="status" aria-live="polite"></div>
 			</div>`;
 			initSketchPad(a);
 			$('#sketch-clear').addEventListener('click', clearSketch);
@@ -479,9 +487,13 @@
 			bubble('user', `<strong>${rawV.trim().replace(/</g, '&lt;')}</strong>`);
 			judge(a.accept.map(normalizeText).includes(v));
 		} else if (a.type === 'sketch') {
-			const res = scoreSketch(a);
+			const res = MG.scoreSketch(a, SK.strokes);
 			if (!res) { nudgeInput(); return; }
-			bubble('user', `✏️ <em>sketched a curve</em> <span class="muted">(${Math.round(res.cover * 100)}% traced)</span>`);
+			const intercept = (label, result) => `${label}: ${result.total ? `${result.hit}/${result.total} located` : 'none in this window'}${result.extra ? ' — unexpected axis crossing' : ''}`;
+			$('#sketch-feedback').innerHTML = `<p>Curve coverage: ${Math.floor(res.cover * 100)}% (need 85%). Line accuracy: ${Math.floor(res.clean * 100)}% (need 90%).</p>
+				<p>${intercept('X-intercepts', res.x)}. ${intercept('Y-intercept', res.y)}.</p>
+				<p>${!res.branchesOK ? 'A visible branch is missing or incomplete. ' : ''}${!res.x.ok || !res.y.ok ? 'Recheck where your curve crosses or touches each axis. ' : ''}${res.clean < .9 ? 'Remove stray lines or adjust the curve shape. ' : ''}${res.cover < .85 ? 'Extend the curve across the visible plotting area. ' : ''}${res.ok ? 'Curve and intercept checks passed.' : ''}</p>`;
+			bubble('user', '✏️ <em>Submitted curve and intercepts for checking.</em>');
 			judge(res.ok);
 		}
 	}
@@ -552,12 +564,7 @@
 	$('#worksheet-print').addEventListener('click', () => window.print());
 	$('#subtopics').addEventListener('change', (e) => { state.subtopic = e.target.value; newQuestion(); });
 	$$('.diff-btn').forEach((b) => b.addEventListener('click', () => {
-		state.difficulty = Number(b.dataset.diff);
-		try { localStorage.setItem('mg-difficulty', String(state.difficulty)); } catch { /* storage unavailable */ }
-		$$('.diff-btn').forEach((x) => {
-			x.classList.toggle('active', x === b);
-			x.setAttribute('aria-pressed', String(x === b));
-		});
+		setDifficulty(Number(b.dataset.diff));
 		newQuestion();
 	}));
 	$('#reset-stats').addEventListener('click', () => { state.stats = {}; saveStats(); renderStats(); });

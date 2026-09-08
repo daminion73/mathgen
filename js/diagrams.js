@@ -478,22 +478,23 @@ window.MG = window.MG || {};
 		// axes
 		const x0 = xmin <= 0 && xmax >= 0 ? X(0) : pad;
 		const y0 = ymin <= 0 && ymax >= 0 ? Y(0) : H - pad;
-		out += line(pad - 6, y0, W - pad + 6, y0, { w: 1.3 });
-		out += line(x0, pad - 6, x0, H - pad + 6, { w: 1.3 });
-		out += text(W - pad + 14, y0 + 4, 'x', { italic: true, size: 13 });
-		out += text(x0, pad - 12, 'y', { italic: true, size: 13 });
+		// Keep axes, ticks and their labels above curves and guide lines.
+		let foreground = line(pad - 6, y0, W - pad + 6, y0, { w: 1.3 });
+		foreground += line(x0, pad - 6, x0, H - pad + 6, { w: 1.3 });
+		foreground += text(W - pad + 14, y0 + 4, 'x', { italic: true, size: 13 });
+		foreground += text(x0, pad - 12, 'y', { italic: true, size: 13 });
 		// ticks
 		const xstep = s.xstep || Math.ceil((xmax - xmin) / 8);
 		for (let x = Math.ceil(xmin / xstep) * xstep; x <= xmax; x += xstep) {
 			if (Math.abs(x) < 1e-9) continue;
-			out += line(X(x), y0 - 3, X(x), y0 + 3, { w: 1 });
-			out += text(X(x), y0 + 16, s.degreesAxis ? x + 'Â°' : x, { size: 10.5 });
+			foreground += line(X(x), y0 - 3, X(x), y0 + 3, { w: 1 });
+			foreground += text(X(x), y0 + 16, s.degreesAxis ? x + 'Â°' : x, { size: 10.5 });
 		}
 		const ystep = s.ystep || Math.ceil((ymax - ymin) / 8);
 		for (let y = Math.ceil(ymin / ystep) * ystep; y <= ymax; y += ystep) {
 			if (Math.abs(y) < 1e-9) continue;
-			out += line(x0 - 3, Y(y), x0 + 3, Y(y), { w: 1 });
-			out += text(x0 - 14, Y(y) + 4, y, { size: 10.5 });
+			foreground += line(x0 - 3, Y(y), x0 + 3, Y(y), { w: 1 });
+			foreground += text(x0 - 14, Y(y) + 4, y, { size: 10.5 });
 		}
 		// dashed guide lines (asymptotes, boundaries): vlines [{x,label?}], hlines [{y,label?}]
 		(s.vlines || []).forEach((v) => {
@@ -517,6 +518,7 @@ window.MG = window.MG || {};
 			}
 			out += path(d, { stroke: f.color || ACCENT, w: 2.2 });
 		});
+		out += foreground;
 		(s.circles || []).forEach((c) => {
 			// circle in graph coordinates (assumes roughly equal axis scaling)
 			const rx = Math.abs(X(c.c[0] + c.r) - X(c.c[0]));

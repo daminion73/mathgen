@@ -23,13 +23,13 @@ MG.generators = MG.generators || [];
 		const [a, b] = pair(r), k = small(r), mid = (a + b) / 2;
 		const fn = (x) => k / ((x - a) * (x - b));
 		const sign = Math.sign(fn(mid));
-		return { marks: 5, text: `For y = ${F.frac(k, `${fac(a)}${fac(b)}`)}, state both vertical asymptotes and whether the middle branch lies above (+1) or below (&minus;1) the x-axis.`, diagram: graph(fn, { vlines: [{ x: a }, { x: b }], hlines: [{ y: 0 }] }), answer: multi([a, b, sign], ['left asymptote x =', 'right asymptote x =', 'middle-branch sign (+1 or -1)']), solution: `<p>The denominator vanishes at ${a} and ${b}. Between them its sign is opposite to the outside factors.</p><p>Answers: <strong>${a}, ${b}, ${sign}</strong>.</p>` };
+		return { marks: 5, text: `For y = ${F.frac(k, `${fac(a)}${fac(b)}`)}, state both vertical asymptotes and whether the middle branch lies above (+1) or below (&minus;1) the x-axis.`, answer: multi([a, b, sign], ['left asymptote x =', 'right asymptote x =', 'middle-branch sign (+1 or -1)']), solution: `<p>The denominator vanishes at ${a} and ${b}. Between them its sign is opposite to the outside factors.</p><p>Answers: <strong>${a}, ${b}, ${sign}</strong>.</p><div class="diagram-wrap">${MG.diagram(graph(fn, { vlines: [{ x: a }, { x: b }] }))}</div>` };
 	});
 
 	add('cs-triple-branch-behaviour', 'Rational curves', 3, (r) => {
 		const [a, b] = pair(r), k = small(r), fn = (x) => k / ((x - a) * (x - b));
 		const left = -Math.sign(k), right = Math.sign(k);
-		return { marks: 6, text: `Analyse y = ${F.frac(k, `${fac(a)}${fac(b)}`)}. Give the two vertical asymptotes, then the signs of y as x approaches the left asymptote from inside and the right asymptote from outside (use +1 for +&infin;, &minus;1 for &minus;&infin;).`, diagram: graph(fn, { vlines: [{ x: a }, { x: b }], hlines: [{ y: 0 }] }), answer: multi([a, b, left, right], ['left asymptote', 'right asymptote', 'inside-left limit sign', 'outside-right limit sign']), solution: `<p>A sign table about the two simple denominator zeros gives <strong>${a}, ${b}, ${left}, ${right}</strong>.</p>` };
+		return { marks: 6, text: `Analyse y = ${F.frac(k, `${fac(a)}${fac(b)}`)}. Give the two vertical asymptotes, then the signs of y as x approaches the left asymptote from inside and the right asymptote from outside (use +1 for +&infin;, &minus;1 for &minus;&infin;).`, answer: multi([a, b, left, right], ['left asymptote', 'right asymptote', 'inside-left limit sign', 'outside-right limit sign']), solution: `<p>A sign table about the two simple denominator zeros gives <strong>${a}, ${b}, ${left}, ${right}</strong>.</p><div class="diagram-wrap">${MG.diagram(graph(fn, { vlines: [{ x: a }, { x: b }] }))}</div>` };
 	});
 
 	add('cs-match-bell-equation', 'Reciprocal quadratics', 2, (r) => {
@@ -44,10 +44,10 @@ MG.generators = MG.generators || [];
 		const prompt = r.pick([
 			'Select the equation for the shown curve. Use its common vertical asymptote and the side of the x-axis occupied by both branches.',
 			'Both branches of the displayed curve share one vertical asymptote. Choose the matching equation.',
-			'The dashed line marks the only vertical asymptote of this curve. Which equation produces it?',
+			'Infer the vertical asymptote from the two branches. Which equation produces this curve?',
 			'Identify the equation of the graphed reciprocal-square curve from its asymptote and sign.'
 		]);
-		return { marks: 4, text: prompt, diagram: graph(fn, { vlines: [{ x: h }], hlines: [{ y: 0 }] }), answer: mc(r, correct, [`y = ${F.frac(-k, `${fac(h)}${F.sup(2)}`)}`, `y = ${F.frac(k, fac(h))}`, `y = ${F.frac(k, `${fac(-h)}${F.sup(2)}`)}`]), solution: `<p>An even-power pole puts both branches on the same side. The displacement identifies <strong>${correct}</strong>.</p>` };
+		return { marks: 4, text: prompt, diagram: graph(fn), answer: mc(r, correct, [`y = ${F.frac(-k, `${fac(h)}${F.sup(2)}`)}`, `y = ${F.frac(k, fac(h))}`, `y = ${F.frac(k, `${fac(-h)}${F.sup(2)}`)}`]), solution: `<p>An even-power pole puts both branches on the same side. The displacement identifies <strong>${correct}</strong>.</p>` };
 	});
 
 	add('cs-reciprocal-of-f-asymptotes', 'Reciprocal reasoning', 2, (r) => {
@@ -74,7 +74,7 @@ MG.generators = MG.generators || [];
 
 	add('cs-domain-range-chain', 'Domain and range', 3, (r) => {
 		const h = small(r), k = small(r), q = r.int(1, 3), fn = (x) => k + 1 / ((x - h) ** 2 + q);
-		return { marks: 6, text: `For y=${k}+${F.frac(1, `${fac(h)}${F.sup(2)}+${q}`)}, state the axis of symmetry, the excluded lower range boundary, and the maximum y-value. Give exact values.`, diagram: graph(fn, { hlines: [{ y: k }] }), answer: multi([h, k, k + 1 / q], ['axis x =', 'range lower boundary y =', 'maximum y-value (exact)']), solution: `<p>The squared term is least at x=${h}. The reciprocal tends to zero but stays positive.</p><p>Required values: <strong>${h}, ${k}, ${MG.fracReduced(k * q + 1, q)}</strong>.</p>` };
+		return { marks: 6, text: `For y=${k}+${F.frac(1, `${fac(h)}${F.sup(2)}+${q}`)}, state the axis of symmetry, the excluded lower range boundary, and the maximum y-value. Give exact values.`, answer: multi([h, k, k + 1 / q], ['axis x =', 'range lower boundary y =', 'maximum y-value (exact)']), solution: `<p>The squared term is least at x=${h}. The reciprocal tends to zero but stays positive.</p><p>Required values: <strong>${h}, ${k}, ${MG.fracReduced(k * q + 1, q)}</strong>.</p><div class="diagram-wrap">${MG.diagram(graph(fn, { hlines: [{ y: k }] }))}</div>` };
 	});
 
 	add('cs-restricted-composite', 'Domain and range', 3, (r) => {
@@ -85,12 +85,12 @@ MG.generators = MG.generators || [];
 	add('cs-full-rational-chain', 'Full curve analysis', 3, (r) => {
 		const [a, b] = pair(r), z = nums.find((n) => n !== a && n !== b) || 0, k = r.sign();
 		const fn = (x) => k * (x - z) / ((x - a) * (x - b));
-		return { marks: 7, text: `For y=${k < 0 ? '&minus;' : ''}${F.frac(fac(z), `${fac(a)}${fac(b)}`)}, give (i) the x-intercept, (ii) both vertical asymptotes, and (iii) the horizontal limiting value as x&rarr;&infin;.`, diagram: graph(fn, { vlines: [{ x: a }, { x: b }], hlines: [{ y: 0 }] }), answer: multi([z, a, b, 0], ['x-intercept', 'left vertical asymptote', 'right vertical asymptote', 'limit at infinity']), solution: `<p>The numerator gives ${z}; denominator factors give ${a}, ${b}; the denominator degree is larger.</p><p><strong>${z}, ${a}, ${b}, 0</strong>.</p>` };
+		return { marks: 7, text: `For y=${k < 0 ? '&minus;' : ''}${F.frac(fac(z), `${fac(a)}${fac(b)}`)}, give (i) the x-intercept, (ii) both vertical asymptotes, and (iii) the horizontal limiting value as x&rarr;&infin;.`, answer: multi([z, a, b, 0], ['x-intercept', 'left vertical asymptote', 'right vertical asymptote', 'limit at infinity']), solution: `<p>The numerator gives ${z}; denominator factors give ${a}, ${b}; the denominator degree is larger.</p><p><strong>${z}, ${a}, ${b}, 0</strong>.</p><div class="diagram-wrap">${MG.diagram(graph(fn, { vlines: [{ x: a }, { x: b }] }))}</div>` };
 	});
 
 	add('cs-oblique-rational-chain', 'Full curve analysis', 3, (r) => {
 		const a = small(r), m = r.pick([-2, -1, 1, 2]), c = small(r), fn = (x) => m * x + c + 1 / (x - a);
-		return { marks: 6, text: `For y=${F.lt(m, 'x')}${F.st(c, '')}+${F.frac(1, fac(a))}, state the vertical asymptote and the gradient and intercept of the oblique asymptote.`, diagram: graph(fn, { vlines: [{ x: a }] }), answer: multi([a, m, c], ['vertical asymptote x =', 'oblique gradient', 'oblique y-intercept']), solution: `<p>The reciprocal term is not defined at x=${a} and tends to zero for large |x|. Thus the oblique asymptote is y=${F.lt(m, 'x')}${F.st(c, '')}.</p>` };
+		return { marks: 6, text: `For y=${F.lt(m, 'x')}${F.st(c, '')}+${F.frac(1, fac(a))}, state the vertical asymptote and the gradient and intercept of the oblique asymptote.`, answer: multi([a, m, c], ['vertical asymptote x =', 'oblique gradient', 'oblique y-intercept']), solution: `<p>The reciprocal term is not defined at x=${a} and tends to zero for large |x|. Thus the oblique asymptote is y=${F.lt(m, 'x')}${F.st(c, '')}.</p><div class="diagram-wrap">${MG.diagram(graph(fn, { vlines: [{ x: a }] }))}</div>` };
 	});
 
 	add('cs-general-transform-point', 'Transformation chains', 3, (r) => {
