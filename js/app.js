@@ -7,6 +7,7 @@
 		topic: 'All',
 		subtopic: 'All',
 		difficulty: loadDifficulty(), // 0 = any; 4 = maximum
+		variety: loadVariety(),
 		seedCounter: Math.floor(Math.random() * 1e9),
 		current: null, // { gen, q, seed, solved, solutionShown }
 		stats: loadStats(),
@@ -18,6 +19,24 @@
 			if (saved !== null && /^[0-4]$/.test(saved)) return Number(saved);
 		} catch { /* storage unavailable */ }
 		return 0;
+	}
+
+	function loadVariety() {
+		try {
+			const saved = localStorage.getItem('mg-variety');
+			if (['random', 'balanced', 'maximum'].includes(saved)) return saved;
+		} catch { /* storage unavailable */ }
+		return 'balanced';
+	}
+
+	function setVariety(value, persist = true) {
+		state.variety = value;
+		if (persist) try { localStorage.setItem('mg-variety', value); } catch { /* storage unavailable */ }
+		$$('.variety-option').forEach((button) => {
+			const active = button.dataset.variety === value;
+			button.classList.toggle('active', active);
+			button.setAttribute('aria-pressed', String(active));
+		});
 	}
 
 	function setDifficulty(value, persist = true) {
@@ -43,6 +62,7 @@
 	}
 
 	const compare = (a, b) => a.localeCompare(b, 'en', { numeric: true });
+	const questionKey = (gen, q) => JSON.stringify([gen.id, q.text, q.diagram], (_key, value) => typeof value === 'function' ? String(value) : value);
 	const TOPICS = ['All', ...[...new Set(MG.generators.map((g) => g.topic))].sort(compare)];
 
 	// ---------- menu page (test selection) ----------
@@ -238,7 +258,7 @@
 		state.current = null;
 		$('#worksheet-create').disabled = !p.length;
 		if (!p.length) { card.innerHTML = '<h2>No matching questions</h2><p>There are no questions at this difficulty for the selected topic and subtopic. Choose another topic or explicitly change the difficulty. Easier questions will not be substituted.</p>'; return; }
-		const seed = state.seedCounter++;
+		let seed = state.seedCounter++;
 		const rng = MG.RNG(seed * 2654435761 % 4294967296);
 		// avoid re-serving recently seen generators so consecutive questions feel fresh
 		const recent = state.recent || (state.recent = []);
@@ -246,10 +266,20 @@
 		const pickFrom = fresh.length ? fresh : p;
 		const gen = pickFrom[Math.floor(rng.next() * pickFrom.length)];
 		recent.push(gen.id);
-		const memory = Math.max(0, Math.min(10, p.length - 1));
+		const requestedMemory = state.variety === 'maximum' ? 30 : state.variety === 'balanced' ? 10 : 0;
+		const memory = Math.max(0, Math.min(requestedMemory, p.length - 1));
 		while (recent.length > memory) recent.shift();
 		let q;
 		try { q = gen.gen(rng); } catch (e) { console.error(gen.id, e); return newQuestion(); }
+		const recentPrompts = state.recentPrompts || (state.recentPrompts = []);
+		let promptKey = questionKey(gen, q);
+		for (let attempt = 1; requestedMemory && recentPrompts.includes(promptKey) && attempt < 12; attempt++) {
+			seed = state.seedCounter++;
+			try { q = gen.gen(MG.RNG(seed * 2654435761 % 4294967296)); } catch (e) { console.error(gen.id, e); return newQuestion(); }
+			promptKey = questionKey(gen, q);
+		}
+		recentPrompts.push(promptKey);
+		while (recentPrompts.length > requestedMemory) recentPrompts.shift();
 		state.current = { gen, q, seed, solved: false, solutionShown: false };
 
 		card.innerHTML = `
@@ -618,6 +648,7 @@
 	renderTopics();
 	renderSubtopics();
 	renderStats();
+	setVariety(state.variety, false);
 	$$('.diff-btn').forEach((b) => {
 		b.classList.toggle('active', Number(b.dataset.diff) === state.difficulty);
 		b.setAttribute('aria-pressed', String(Number(b.dataset.diff) === state.difficulty));
@@ -637,6 +668,7 @@
 		setDifficulty(Number(b.dataset.diff));
 		newQuestion();
 	}));
+	$$('.variety-option').forEach((button) => button.addEventListener('click', () => setVariety(button.dataset.variety)));
 	$('#reset-stats').addEventListener('click', () => { state.stats = {}; saveStats(); renderStats(); });
 	// count-up animation for the generator total
 	(function () {
