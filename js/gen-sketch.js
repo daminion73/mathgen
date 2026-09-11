@@ -5,7 +5,7 @@ MG.generators = MG.generators || [];
 (function () {
 	const F = MG.fmt, G = MG.generators;
 	const add = (id, subtopic, difficulty, gen) => G.push({ id, topic: 'Sketch', subtopic, difficulty, gen });
-	const fac = (a) => a < 0 ? `(x + ${-a})` : `(x &minus; ${a})`;
+	const fac = (a) => a === 0 ? 'x' : a < 0 ? `(x + ${-a})` : `(x &minus; ${a})`;
 	const pair = (r) => {
 		let a = r.int(-3, 2), b = r.int(-2, 3);
 		while (a === b) b = r.int(-2, 3);

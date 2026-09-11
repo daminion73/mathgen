@@ -16,12 +16,26 @@
     const saved = stored('mg-background', 'drift');
     return saved === 'pit' ? 'pit' : 'drift';
   }
+  function preferredFont() {
+    const saved = stored('mg-font', 'mono');
+    return ['mono', 'assistant', 'cabin', 'open-sans', 'wingdings'].includes(saved) ? saved : 'mono';
+  }
   function save(key, value) {
     try { localStorage.setItem(key, value); } catch { /* storage unavailable */ }
   }
   function applyTheme(theme, persist) {
     root.dataset.theme = theme;
     if (persist) save('mg-theme', theme);
+  }
+  function applyFont(font, persist = true) {
+    root.dataset.font = font;
+    if (persist) save('mg-font', font);
+    document.querySelectorAll('.font-option').forEach((button) => {
+      const active = button.dataset.font === font;
+      if (button.dataset.font === 'wingdings' && active) button.hidden = false;
+      button.classList.toggle('active', active);
+      button.setAttribute('aria-pressed', String(active));
+    });
   }
 
   function makeGlyph(className = '') {
@@ -117,6 +131,7 @@
 
   applyTheme(preferredTheme(), false);
   root.dataset.background = preferredBackground();
+  root.dataset.font = preferredFont();
 
   document.addEventListener('pointermove', (event) => {
     pointer = { x: event.clientX, y: event.clientY };
@@ -143,6 +158,19 @@
     document.querySelectorAll('.background-option').forEach((button) => {
       button.addEventListener('click', () => applyBackground(button.dataset.background));
     });
+    document.querySelectorAll('.font-option').forEach((button) => {
+      button.addEventListener('click', () => applyFont(button.dataset.font));
+    });
+    let fontHeadingClicks = 0;
+    const fontHeading = document.getElementById('font-heading');
+    if (fontHeading) fontHeading.addEventListener('click', () => {
+      fontHeadingClicks++;
+      if (fontHeadingClicks === 5) {
+        const secret = document.querySelector('.font-option[data-font="wingdings"]');
+        if (secret) secret.hidden = false;
+      }
+    });
     applyBackground(preferredBackground(), false);
+    applyFont(preferredFont(), false);
   });
 })();

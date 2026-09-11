@@ -37,9 +37,9 @@ MG.generators = MG.generators || [];
 		return { marks: 3, text: `S has ${n} elements, including distinct elements ${a} and ${b}. Find (i) |P(S)| and (ii) the number of subsets containing ${a} but not ${b}.`, answer: multi([2 ** n, 2 ** (n - 2)], ['power-set size', 'constrained subsets']), solution: sol(`Each element gives include/exclude, so |P(S)|=2^${n}. Fix ${a} in and ${b} out; the other ${n - 2} elements remain free`, `${2 ** n}, ${2 ** (n - 2)}`) };
 	});
 
-	add('ch56-roster-operations', 'Set Theory', 'Union, intersection and difference', 2, r => {
+	add('ch56-roster-operations', 'Set Theory', 'Union ∪, intersection ∩ and difference ∖', 2, r => {
 		const m = r.int(7, 15), divisor = r.int(2, 4), cut = r.int(2, m - 2), A = range(1, m).filter(x => x % divisor !== 0), B = range(1, m).filter(x => x > cut), inter = A.filter(x => B.includes(x));
-		return { marks: 4, text: `U={1,...,${m}}, A={${A}}, B={${B}}. Find the cardinalities of A&cup;B, A&cap;B, A\B and A&prime;.`, answer: multi([new Set([...A, ...B]).size, inter.length, A.length - inter.length, m - A.length], ['|A union B|', '|A intersection B|', '|A\\B|', '|A complement|']), solution: sol(`Compare the displayed roster entries, with complements taken in U`, `${new Set([...A, ...B]).size}, ${inter.length}, ${A.length - inter.length}, ${m - A.length}`) };
+		return { marks: 4, text: `U={1,...,${m}}, A={${A}}, B={${B}}. Find the cardinalities of A ∪ B, A ∩ B, A ∖ B and A′.`, answer: multi([new Set([...A, ...B]).size, inter.length, A.length - inter.length, m - A.length], ['|A ∪ B|', '|A ∩ B|', '|A ∖ B|', '|A′|']), solution: sol(`Compare the displayed roster entries: ∪ combines both sets, ∩ keeps shared elements, ∖ keeps elements of A outside B, and ′ takes the complement in U`, `${new Set([...A, ...B]).size}, ${inter.length}, ${A.length - inter.length}, ${m - A.length}`) };
 	});
 
 	add('ch56-venn-interpret', 'Set Theory', 'Venn-region interpretation', 2, r => {
