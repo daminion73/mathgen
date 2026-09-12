@@ -11,6 +11,7 @@
 		seedCounter: Math.floor(Math.random() * 1e9),
 		current: null, // { gen, q, seed, solved, solutionShown }
 		stats: loadStats(),
+		lastTopic: null,
 	};
 
 	function loadDifficulty() {
@@ -50,14 +51,22 @@
 	}
 
 	function loadStats() {
-		try { return JSON.parse(localStorage.getItem('mg-stats') || '{}'); } catch { return {}; }
+		try {
+			const saved = JSON.parse(localStorage.getItem('mg-stats') || '{}');
+			if (!saved || Array.isArray(saved) || typeof saved !== 'object') return {};
+			return Object.fromEntries(Object.entries(saved).filter(([, value]) =>
+				value && Number.isInteger(value.attempted) && value.attempted >= 0 &&
+				Number.isInteger(value.correct) && value.correct >= 0 && value.correct <= value.attempted));
+		} catch { return {}; }
 	}
 	function saveStats() {
 		try { localStorage.setItem('mg-stats', JSON.stringify(state.stats)); } catch { /* storage unavailable */ }
 	}
 	function bumpStat(topic, ok) {
+		if (!state.current || state.current.attemptRecorded) return;
 		const s = state.stats[topic] || { attempted: 0, correct: 0 };
 		s.attempted++; if (ok) s.correct++;
+		state.current.attemptRecorded = true;
 		state.stats[topic] = s; saveStats(); renderStats();
 	}
 
@@ -109,13 +118,41 @@
 		const i = topicInfo(topic);
 		const title = topic === 'All' ? 'Mixed paper' : topic === 'Boss' ? '♛ Boss gauntlet' : topic === 'Sketch' ? '✏ Curve drawing' : topic;
 		const code = featured ? ['MIX', 'BOSS', 'DRAW'][idx] : String(idx + 1).padStart(2, '0');
-		return `<article class="test-card ${featured ? 'tc-featured' : ''}" data-topic="${topic}" tabindex="0" role="button" aria-label="Start ${title}">
+		const s = state.stats[topic];
+		const accuracy = s?.attempted ? Math.round(s.correct / s.attempted * 100) : null;
+		const progress = accuracy === null ? '' : `<div class="tc-progress"><span>${accuracy}% FIRST-TRY ACCURACY</span><span>${s.attempted} ATTEMPT${s.attempted === 1 ? '' : 'S'}</span><div class="bar"><div class="bar-fill" style="width:${accuracy}%"></div></div></div>`;
+		const search = [topic, title, TOPIC_BLURBS[topic], ...subtopicsFor(topic)].join(' ').toLowerCase();
+		return `<article class="test-card ${featured ? 'tc-featured' : ''}" data-topic="${topic}" data-search="${search}">
 			<div class="tc-top"><span class="tc-code">${code}</span><span class="tc-diff" title="difficulty range">${diffSpan(i.dmin, i.dmax)}</span></div>
 			<h4 class="tc-title">${title}</h4>
 			<p class="tc-desc">${TOPIC_BLURBS[topic] || 'Worksheet-calibre generated questions with worked solutions.'}</p>
 			<div class="tc-meta"><span>${i.count} QUESTION TYPES</span><span>${i.subs} SUBTOPIC${i.subs === 1 ? '' : 'S'}</span></div>
-			<span class="btn btn-primary tc-start">START →</span>
+			${progress}
+			<div class="tc-actions"><button class="btn tc-practice" aria-label="Practise ${title}">PRACTISE →</button><button class="btn btn-ghost tc-worksheet" aria-label="Create ${title} worksheet">WORKSHEET</button></div>
 		</article>`;
+	}
+
+	function renderContinuePanel() {
+		let topic = state.lastTopic;
+		try { topic = localStorage.getItem('mg-last-topic') || topic; } catch { /* storage unavailable */ }
+		const panel = $('#continue-panel');
+		if (!topic || !TOPICS.includes(topic)) { panel.hidden = true; return; }
+		const title = topic === 'All' ? 'Mixed paper' : topic;
+		const s = state.stats[topic], detail = s?.attempted ? `${s.correct}/${s.attempted} correct on the first try` : 'Ready for another generated question';
+		panel.innerHTML = `<div class="continue-mark" aria-hidden="true">↗</div><div><span class="continue-kicker">CONTINUE WHERE YOU LEFT OFF</span><h3>${title}</h3><p>${detail}</p></div><button id="continue-start" class="btn btn-primary">RESUME →</button>`;
+		panel.hidden = false;
+		$('#continue-start').addEventListener('click', () => startPractice(topic));
+	}
+
+	function filterMenu(query = '') {
+		const needle = query.trim().toLowerCase();
+		let visible = 0;
+		$$('#menu-page .test-card').forEach((card) => {
+			card.hidden = Boolean(needle) && !card.dataset.search.includes(needle);
+			if (!card.hidden) visible++;
+		});
+		$('#topic-search-count').textContent = needle ? `${visible} result${visible === 1 ? '' : 's'}` : `${TOPICS.length} topics`;
+		$('#topic-search-clear').hidden = !needle;
 	}
 
 	function renderMenu() {
@@ -124,15 +161,19 @@
 		$('#menu-featured').innerHTML = featured.map((t, i) => menuCard(t, i, true)).join('');
 		$('#menu-grid').innerHTML = regular.map((t, i) => menuCard(t, i, false)).join('');
 		$$('#menu-page .test-card').forEach((card) => {
-			const go = () => startPractice(card.dataset.topic);
-			card.addEventListener('click', go);
-			card.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } });
+			card.addEventListener('click', (event) => { if (!event.target.closest('button')) startPractice(card.dataset.topic); });
+			$('.tc-practice', card).addEventListener('click', () => startPractice(card.dataset.topic));
+			$('.tc-worksheet', card).addEventListener('click', () => { startPractice(card.dataset.topic); createWorksheet(); });
 		});
+		renderContinuePanel();
+		filterMenu($('#topic-search')?.value || '');
 	}
 
 	function startPractice(topic) {
 		state.topic = topic;
 		state.subtopic = 'All';
+		state.lastTopic = topic;
+		try { localStorage.setItem('mg-last-topic', topic); } catch { /* storage unavailable */ }
 		// A topic change must never inherit a restrictive filter from another test.
 		setDifficulty(0);
 		$('#menu-page').hidden = true;
@@ -141,12 +182,15 @@
 		renderTopics(); renderSubtopics();
 		newQuestion();
 		window.scrollTo(0, 0);
+		$('#question-card').focus({ preventScroll: true });
 	}
 
 	function showMenu() {
 		$('#practice-page').hidden = true;
 		$('#menu-page').hidden = false;
+		renderMenu();
 		window.scrollTo(0, 0);
+		$('.menu-title').focus({ preventScroll: true });
 	}
 
 	function subtopicsFor(topic) {
@@ -213,8 +257,10 @@
 		const t = bubble('bot', '<span class="tdot"></span><span class="tdot"></span><span class="tdot"></span>', 'typing');
 		setTimeout(() => {
 			t.remove();
-			if (state.current !== current) return;
-			bubble('bot', html, cls);
+			if (state.current !== current || (cls === 'hint-bubble' && current.solutionShown)) return;
+			const reply = bubble('bot', html, cls);
+			const announcer = $('#status-announcer');
+			if (announcer) announcer.textContent = reply.textContent;
 		}, delay);
 	}
 
@@ -249,6 +295,7 @@
 		$('#practice-page').hidden = true;
 		$('#worksheet-page').hidden = false;
 		window.scrollTo(0, 0);
+		$('#worksheet-page').focus({ preventScroll: true });
 	}
 
 	// ---------- question flow ----------
@@ -285,12 +332,12 @@
 		card.innerHTML = `
 			<div class="q-anim">
 				<div class="chat" id="chat"></div>
+				<div id="input-bar"></div>
 				<div class="q-actions">
 					<button id="hint-btn" class="btn-link">Hint 💡</button>
 					<button id="reveal-btn" class="btn-link">Show solution <span class="arr">→</span></button>
 					<button id="next-btn" class="btn btn-primary">Next question</button>
 				</div>
-				<div id="input-bar"></div>
 			</div>`;
 		chatEl = $('#chat');
 
@@ -481,6 +528,7 @@
 			const label = a.type === 'numeric' ? (a.label || 'answer') : 'answer';
 			const ph = a.type === 'text' ? (a.placeholder || 'Type your answer…') : `Enter ${label}…`;
 			bar.innerHTML = `<div class="chat-input" id="chat-input">
+				<label class="sr-only" for="${a.type === 'numeric' ? 'num-0' : 'text-0'}">${label}</label>
 				<input type="text" id="${a.type === 'numeric' ? 'num-0' : 'text-0'}" placeholder="${ph}" autocomplete="off" ${a.type === 'numeric' ? 'inputmode="decimal"' : ''}>
 				<button id="check-btn" class="send-btn" title="Send answer">→</button>
 			</div>
@@ -508,10 +556,14 @@
 	}
 
 	function parseNum(s) {
-		s = (s || '').trim().replace(/−|–/g, '-').replace(/,/g, '');
-		if (/^-?\d+\s*\/\s*\d+$/.test(s)) { const [n, d] = s.split('/').map(Number); return n / d; }
-		const v = parseFloat(s);
-		return isNaN(v) ? null : v;
+		s = (s || '').trim().replace(/−|–/g, '-');
+		if (/^-?\d+\s*\/\s*-?\d+$/.test(s)) {
+			const [n, d] = s.split('/').map(Number), value = n / d;
+			return Number.isFinite(value) ? value : null;
+		}
+		if (!/^-?(?:(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?$/i.test(s)) return null;
+		const value = Number(s.replace(/,/g, ''));
+		return Number.isFinite(value) ? value : null;
 	}
 
 	function parseSketchList(raw) {
@@ -616,6 +668,10 @@
 		if (state.current.solutionShown) return;
 		state.current.solutionShown = true;
 		const hintBtn = $('#hint-btn'); if (hintBtn) hintBtn.style.display = 'none';
+		const revealBtn = $('#reveal-btn'); if (revealBtn) revealBtn.hidden = true;
+		if (q.answer.type !== 'self') {
+			$$('#input-bar input, #input-bar button, .chat-choice').forEach((control) => { control.disabled = true; });
+		}
 		botReply(`<h3 class="sol-title">Worked solution</h3>${q.solution}`, 'solution-bubble', silent ? 750 : 550);
 	}
 
@@ -660,6 +716,7 @@
 		$('#worksheet-page').hidden = true;
 		$('#practice-page').hidden = false;
 		window.scrollTo(0, 0);
+		$('#question-card').focus({ preventScroll: true });
 	});
 	$('#worksheet-solutions').addEventListener('change', (e) => { $('#worksheet-key').hidden = !e.target.checked; });
 	$('#worksheet-print').addEventListener('click', () => window.print());
@@ -669,7 +726,19 @@
 		newQuestion();
 	}));
 	$$('.variety-option').forEach((button) => button.addEventListener('click', () => setVariety(button.dataset.variety)));
-	$('#reset-stats').addEventListener('click', () => { state.stats = {}; saveStats(); renderStats(); });
+	$('#reset-stats').addEventListener('click', () => {
+		if (!confirm('Reset all progress? This cannot be undone.')) return;
+		state.stats = {}; saveStats(); renderStats();
+		if (!$('#menu-page').hidden) renderMenu();
+	});
+	$('#topic-search').addEventListener('input', (event) => filterMenu(event.target.value));
+	$('#topic-search').addEventListener('keydown', (event) => { if (event.key === 'Escape') { event.target.value = ''; filterMenu(); } });
+	$('#topic-search-clear').addEventListener('click', () => { $('#topic-search').value = ''; filterMenu(); $('#topic-search').focus(); });
+	document.addEventListener('keydown', (event) => {
+		if (event.key === '/' && !$('#menu-page').hidden && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) {
+			event.preventDefault(); $('#topic-search').focus();
+		}
+	});
 	// count-up animation for the generator total
 	(function () {
 		const el = $('#gen-count'), total = MG.generators.length;

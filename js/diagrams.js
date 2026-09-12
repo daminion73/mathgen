@@ -939,6 +939,16 @@ window.MG = window.MG || {};
 	MG.diagram = function (spec) {
 		const r = R[spec.type];
 		if (!r) return '';
-		return r(spec);
+		const svg = r(spec);
+		if (svg.includes('<title>')) return svg;
+		const names = {
+			rightTriangle: 'Right triangle', triangle: 'Triangle', elevation: 'Elevation diagram', bearings: 'Bearing diagram',
+			parallelLines: 'Parallel lines', similarParallel: 'Similar triangles', angleAtCentre: 'Circle angle', cyclicQuad: 'Cyclic quadrilateral',
+			sameArc: 'Angles in the same arc', tangentRadius: 'Tangent and radius', venn2: 'Two-set Venn diagram', venn3: 'Three-set Venn diagram',
+			tree2: 'Probability tree', boxplot: 'Box plot', normal: 'Normal distribution', graph: 'Coordinate graph', sector: 'Circle sector',
+			cuboid: 'Cuboid', pyramid: 'Pyramid', cone: 'Cone', cylinder: 'Cylinder', quad: 'Quadrilateral', polygon: 'Polygon',
+			circles2: 'Two circles', similarTriangles: 'Similar triangles', solid3d: 'Three-dimensional solid',
+		};
+		return svg.replace('>', `><title>${names[spec.type] || 'Mathematical diagram'}</title>`);
 	};
 })();

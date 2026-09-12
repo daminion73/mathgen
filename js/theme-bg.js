@@ -10,7 +10,7 @@
   }
   function preferredTheme() {
     const saved = stored('mg-theme', '');
-    return saved || (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    return ['light', 'dark'].includes(saved) ? saved : (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
   }
   function preferredBackground() {
     const saved = stored('mg-background', 'drift');

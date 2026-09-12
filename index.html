@@ -79,7 +79,7 @@
   </div>
 </dialog>
 <section class="hero">
-  <h1>YEARS 10–12 · PAST-PAPER PRACTICE</h1>
+  <h1>GENERATED PRACTICE INDEX</h1>
   <div class="features" aria-label="Practice index">
     <span><b>∞ QUESTION TYPES</b><span id="gen-count">–</span></span>
     <span><b>CHECK</b>INSTANT</span>
@@ -88,9 +88,18 @@
 </section>
 <section id="menu-page" aria-label="Test selection">
   <div class="menu-head">
-    <h2 class="menu-title">SELECT A PRACTICE TEST</h2>
+    <h2 class="menu-title" tabindex="-1">SELECT A PRACTICE TEST</h2>
     <p class="menu-sub">Choose a topic for practice or a printable worksheet. Every topic starts with all difficulty levels available.</p>
   </div>
+  <section id="continue-panel" class="continue-panel" hidden aria-label="Continue practice"></section>
+  <div class="menu-tools">
+    <label class="sr-only" for="topic-search">Search practice topics</label>
+    <span class="search-icon" aria-hidden="true">⌕</span>
+    <input id="topic-search" type="search" autocomplete="off" placeholder="Search topics…">
+    <span id="topic-search-count" class="search-count" role="status" aria-live="polite"></span>
+    <button id="topic-search-clear" class="btn btn-small" hidden>Clear</button>
+  </div>
+  <div class="difficulty-legend" aria-label="Difficulty legend"><span>★ FOUNDATION</span><span>★★ INTERMEDIATE</span><span>★★★ ADVANCED</span><span>♛ BOSS</span><kbd>/</kbd><span>SEARCH</span></div>
   <h3 class="menu-heading">FEATURED</h3>
   <div id="menu-featured" class="menu-grid menu-featured"></div>
   <h3 class="menu-heading">TOPIC PAPERS</h3>
@@ -105,8 +114,8 @@
       <label for="subtopics">SUBTOPIC</label>
       <select id="subtopics"></select>
     </div>
-    <div class="filter-group">
-      <label>DIFFICULTY</label>
+    <div class="filter-group" role="group" aria-labelledby="difficulty-label">
+      <span class="filter-label" id="difficulty-label">DIFFICULTY</span>
       <div class="diff-row">
         <button class="diff-btn" data-diff="0">ANY</button><button class="diff-btn" data-diff="1" aria-label="Difficulty 1">★</button><button class="diff-btn" data-diff="2" aria-label="Difficulty 2">★★</button><button class="diff-btn" data-diff="3" aria-label="Difficulty 3">★★★</button><button class="diff-btn active" data-diff="4" title="Maximum difficulty: multi-step reasoning">♛ BOSS</button>
       </div>
@@ -118,14 +127,15 @@
       <button id="worksheet-create" class="btn worksheet-create">Create worksheet →</button>
     </div>
   </aside>
-  <main id="question-card"></main>
+  <main id="question-card" tabindex="-1"></main>
+  <div id="status-announcer" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
   <aside class="panel">
     <h2>YOUR PROGRESS</h2>
     <div id="stats"></div>
     <button id="reset-stats" class="btn btn-ghost btn-small">RESET PROGRESS</button>
   </aside>
 </div>
-<section id="worksheet-page" hidden aria-label="Printable worksheet">
+<section id="worksheet-page" hidden aria-label="Printable worksheet" tabindex="-1">
   <div class="worksheet-toolbar">
     <button id="worksheet-back" class="btn">← Practice</button>
     <button id="worksheet-new" class="btn">New worksheet</button>

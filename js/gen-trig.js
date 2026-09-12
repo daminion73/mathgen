@@ -50,8 +50,8 @@ MG.generators = MG.generators || [];
 
 	add('trig-cosine-sine-chain', 'Non-right triangles', 3, (r) => {
 		const b = r.int(12, 29), c = r.int(10, 25), A = r.int(48, 118), a = Math.sqrt(b * b + c * c - 2 * b * c * Math.cos(rad(A)));
-		const B = Math.asin(b * Math.sin(rad(A)) / a) * 180 / Math.PI, out = dm(B);
-		return { marks: 6, text: `Triangle ABC has b = ${b} m, c = ${c} m and included angle A = ${A}&deg;.<br>(i) Find side a using the cosine rule.<br>(ii) Hence find angle B to the nearest minute.`, diagram: { type: 'triangle', a, b, c, labels: ['A', 'B', 'C'], sideLabels: ['a', `${b} m`, `${c} m`], angleLabels: [`${A}&deg;`, 'B', ''] }, answer: { type: 'multinumeric', values: out, labels: ['B degrees (nearest minute)', 'B minutes'], tolerance: 0.01 }, solution: `<p>a&sup2; = ${b}&sup2; + ${c}&sup2; &minus; 2(${b})(${c})cos ${A}&deg;, so a = ${rnd(a, 3)} m.</p><p>Then sin B/a = sin A/b, giving <strong>B = ${out[0]}&deg; ${out[1]}'</strong>.</p>` };
+		const B = Math.acos((a * a + c * c - b * b) / (2 * a * c)) * 180 / Math.PI, out = dm(B);
+		return { marks: 6, text: `Triangle ABC has b = ${b} m, c = ${c} m and included angle A = ${A}&deg;.<br>(i) Find side a using the cosine rule.<br>(ii) Hence find angle B to the nearest minute.`, diagram: { type: 'triangle', a, b, c, labels: ['A', 'B', 'C'], sideLabels: ['a', `${b} m`, `${c} m`], angleLabels: [`${A}&deg;`, 'B', ''] }, answer: { type: 'multinumeric', values: out, labels: ['B degrees (nearest minute)', 'B minutes'], tolerance: 0.01 }, solution: `<p>a&sup2; = ${b}&sup2; + ${c}&sup2; &minus; 2(${b})(${c})cos ${A}&deg;, so a = ${rnd(a, 3)} m.</p><p>The sine rule gives sin B/a = sin A/b. Use the side lengths to choose the angle consistent with this unique SAS triangle: <strong>B = ${out[0]}&deg; ${out[1]}'</strong>.</p>` };
 	});
 
 	add('trig-ambiguous-area', 'Non-right triangles', 3, (r) => {
