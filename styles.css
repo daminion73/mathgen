@@ -213,6 +213,7 @@ button:focus-visible,.chat-choice:focus-visible,.chip:focus-visible{outline:0;bo
 #worksheet-page{position:relative;z-index:1;max-width:960px;margin:0 auto;padding:0 24px 48px}
 .worksheet-toolbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 24px}
 .worksheet-toolbar label{font-size:13px;display:flex;align-items:center;gap:8px}
+#worksheet-score{flex-basis:100%;min-height:20px;color:var(--fg-muted);font-size:var(--fs-sm);font-variant-numeric:tabular-nums}
 #worksheet-content{background:var(--surface);border:1px solid var(--line);padding:40px}
 .worksheet-heading{border-bottom:2px solid var(--fg);padding-bottom:20px;margin-bottom:32px}
 .worksheet-heading h1{font-size:26px}.worksheet-heading p{font-size:13px}.name-line{margin-top:24px}
@@ -221,6 +222,7 @@ button:focus-visible,.chat-choice:focus-visible,.chip:focus-visible{outline:0;bo
 .worksheet-question-head{display:flex;justify-content:space-between;gap:16px;align-items:baseline}
 .worksheet-question-head h2,.worksheet-solution h2{font-size:18px}.worksheet-question-head>span{font-size:13px;white-space:nowrap}
 .working-space{height:120px;background:repeating-linear-gradient(transparent 0,transparent 29px,var(--line) 29px,var(--line) 30px);margin-top:24px}
+.worksheet-answer{margin-top:24px;padding:16px;border:1px solid var(--line);border-radius:var(--radius);background:color-mix(in srgb,var(--fg) 2%,var(--surface))}.worksheet-answer h3{margin:0 0 12px;color:var(--fg-faint);font-size:var(--fs-xs);font-weight:400;letter-spacing:.18em}.worksheet-answer-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.worksheet-answer-fields label{display:flex;flex-direction:column;gap:5px;color:var(--fg-muted);font-size:var(--fs-xs)}.worksheet-answer-fields input,.worksheet-answer-fields select{width:100%;min-height:42px;padding:8px}.worksheet-answer-fields .worksheet-manual{grid-column:1/-1;flex-direction:row;align-items:center}.worksheet-manual input{width:18px;min-height:18px}.worksheet-result{min-height:20px;margin:12px 0 0;font-size:var(--fs-sm)}.worksheet-correct .worksheet-answer{box-shadow:inset 3px 0 0 var(--fg)}.worksheet-partial .worksheet-answer{box-shadow:inset 3px 0 0 var(--fg-muted)}.worksheet-wrong .worksheet-answer{box-shadow:inset 3px 0 0 var(--line-strong)}
 #worksheet-key{margin-top:48px;border-top:2px solid var(--fg);padding-top:24px}
 .worksheet-solution{padding:24px 0;border-bottom:1px solid var(--line);line-height:1.8;overflow-wrap:anywhere}
 @media(max-width:900px){
@@ -234,13 +236,14 @@ button:focus-visible,.chat-choice:focus-visible,.chip:focus-visible{outline:0;bo
   #question-card{padding:18px}.multi-row,.sketch-feature-grid{grid-template-columns:1fr}.multi-row input,.sketch-feature-grid input{min-height:44px}
   .q-actions #next-btn{margin-left:0}.diagram-wrap{padding:8px}.topic-btn{overflow-wrap:anywhere}
   #worksheet-page{padding:0 12px 24px}#worksheet-content{padding:20px}.worksheet-heading h1{font-size:22px}
+  .worksheet-answer-fields{grid-template-columns:1fr}.worksheet-toolbar .btn{min-height:44px}
 }
 @page{size:A4;margin:16mm}
 @media print{
   :root,[data-theme="dark"]{--bg:#fff;--surface:#fff;--fg:#111;--fg-muted:#444;--line:#ccc;--line-strong:#aaa}
   *{animation:none!important;transition:none!important;box-shadow:none!important}
   body{background:#fff!important;font:11pt/1.5 Georgia,"Times New Roman",serif}
-  body>header,.hero,#menu-page,#practice-page,.site-footer,#math-bg,#grain,#scroll-progress,.worksheet-toolbar{display:none!important}
+  body>header,.hero,#menu-page,#practice-page,.site-footer,#math-bg,#grain,#scroll-progress,.worksheet-toolbar,.worksheet-answer{display:none!important}
   #worksheet-page{max-width:none;padding:0;margin:0}#worksheet-content{border:0;padding:0}
   .worksheet-heading h1{font-size:22pt}.worksheet-question{break-before:page;border:0;padding:0}
   .worksheet-question-head,.worksheet-question .eyebrow{break-after:avoid}

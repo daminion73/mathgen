@@ -12,6 +12,7 @@
 		current: null, // { gen, q, seed, solved, solutionShown }
 		stats: loadStats(),
 		lastTopic: null,
+		worksheet: null,
 	};
 
 	function loadDifficulty() {
@@ -73,6 +74,18 @@
 	const compare = (a, b) => a.localeCompare(b, 'en', { numeric: true });
 	const questionKey = (gen, q) => JSON.stringify([gen.id, q.text, q.diagram], (_key, value) => typeof value === 'function' ? String(value) : value);
 	const TOPICS = ['All', ...[...new Set(MG.generators.map((g) => g.topic))].sort(compare)];
+	const BOSS_AREAS = [
+		['Probability, Sets & Statistics', /probab|bayes|conditional|urn|dice|coin|venn|set-|expected|variance|normal|zscore|binomial|committee|counting|lottery|frequency|mean|median|quartile|stdev|boxplot|cumfreq|sampling|defect|draws|trials/],
+		['Sequences, Growth & Finance', /sequence|series|\bap\b|\bgp\b|recurrence|compound|loan|interest|annuity|depreciation|growth|decay|halflife/],
+		['Trigonometry & Bearings', /trig|sine|cosine|bearing|elevation|depression|tower|angle of/],
+		['Coordinate Geometry & Loci', /coordinate|line-circle|gradient|midpoint|locus|parabola|reflect|perp|centroid|shoelace|circle-line/],
+		['Geometry & Measurement', /geometry|circle|triangle|polygon|sector|segment|area|volume|cuboid|pyramid|cone|sphere|frustum|similar|tangent|cyclic|chord|solid|rectangle|square|annulus|heron|kite|trapezium|diagonal|shape/],
+		['Algebra & Functions', /algebra|polynomial|quadratic|surd|log|exponential|simultaneous|equation|inequal|ratio|proportion|variation|remainder|vieta|discriminant|root|factor|absolute|fraction|linear|inverse|domain|composition|transform/],
+	];
+	function bossArea(gen) {
+		const key = `${gen.id} ${gen.subtopic}`.toLowerCase();
+		return (BOSS_AREAS.find(([, pattern]) => pattern.test(key)) || ['Number, Rates & Applications'])[0];
+	}
 
 	// ---------- menu page (test selection) ----------
 	const TOPIC_BLURBS = {
@@ -103,7 +116,7 @@
 
 	function topicInfo(topic) {
 		const gens = MG.generators.filter((g) => topic === 'All' || g.topic === topic);
-		const subs = new Set(gens.map((g) => g.subtopic));
+		const subs = new Set(gens.map((g) => topic === 'Boss' ? bossArea(g) : g.subtopic));
 		const dmin = Math.min(...gens.map((g) => g.difficulty));
 		const dmax = Math.max(...gens.map((g) => g.difficulty));
 		return { count: gens.length, subs: subs.size, dmin, dmax };
@@ -194,14 +207,14 @@
 	}
 
 	function subtopicsFor(topic) {
-		const set = new Set(MG.generators.filter((g) => topic === 'All' || g.topic === topic).map((g) => g.subtopic));
+		const set = new Set(MG.generators.filter((g) => topic === 'All' || g.topic === topic).map((g) => topic === 'Boss' ? bossArea(g) : g.subtopic));
 		return ['All', ...[...set].sort(compare)];
 	}
 
 	function pool() {
 		return MG.generators.filter((g) =>
 			(state.topic === 'All' || g.topic === state.topic) &&
-			(state.subtopic === 'All' || g.subtopic === state.subtopic) &&
+			(state.subtopic === 'All' || (state.topic === 'Boss' ? bossArea(g) : g.subtopic) === state.subtopic) &&
 			(state.difficulty === 0 || g.difficulty === state.difficulty));
 	}
 
@@ -218,7 +231,8 @@
 	function renderSubtopics() {
 		const el = $('#subtopics');
 		const subs = subtopicsFor(state.topic);
-		el.innerHTML = subs.map((s) => `<option value="${s}" ${s === state.subtopic ? 'selected' : ''}>${s === 'All' ? 'All subtopics' : s}</option>`).join('');
+		$('label[for="subtopics"]').textContent = state.topic === 'Boss' ? 'BOSS SUBJECT' : 'SUBTOPIC';
+		el.innerHTML = subs.map((s) => `<option value="${s}" ${s === state.subtopic ? 'selected' : ''}>${s === 'All' ? (state.topic === 'Boss' ? 'All Boss subjects' : 'All subtopics') : s}</option>`).join('');
 	}
 
 	function renderStats() {
@@ -265,6 +279,56 @@
 	}
 
 	// ---------- numbered worksheets: one snapshot, matching separate solutions ----------
+	function worksheetAnswer(q, questionIndex) {
+		const a = q.answer, id = `worksheet-answer-${questionIndex}`;
+		let fields = '';
+		if (a.type === 'numeric') {
+			fields = `<label><span>${a.label || 'Answer'}</span><input data-part="0" type="text" inputmode="decimal" autocomplete="off"></label>`;
+		} else if (a.type === 'multinumeric') {
+			fields = a.values.map((_, i) => `<label><span>${a.labels[i]}</span><input data-part="${i}" type="text" inputmode="decimal" autocomplete="off"></label>`).join('');
+		} else if (a.type === 'text') {
+			fields = `<label><span>Answer</span><input data-part="0" type="text" autocomplete="off" placeholder="${a.placeholder || ''}"></label>`;
+		} else if (a.type === 'mc') {
+			fields = `<label><span>Selected option</span><select data-part="0"><option value="">Choose…</option>${a.choices.map((_, i) => `<option value="${i}">${'ABCD'[i]}</option>`).join('')}</select></label>`;
+		} else {
+			fields = `<label class="worksheet-manual"><input data-part="0" type="checkbox"><span>I checked my work against the solution and marked this correct</span></label>`;
+		}
+		return `<section class="worksheet-answer" id="${id}" data-question="${questionIndex}" data-type="${a.type}"><h3>YOUR ANSWER</h3><div class="worksheet-answer-fields">${fields}</div><p class="worksheet-result" role="status"></p></section>`;
+	}
+
+	function markWorksheet() {
+		if (!state.worksheet) return;
+		let correctParts = 0, totalParts = 0, fullQuestions = 0;
+		state.worksheet.forEach(({ q }, i) => {
+			const box = $(`.worksheet-answer[data-question="${i}"]`), controls = $$('[data-part]', box), a = q.answer;
+			let results;
+			if (a.type === 'numeric') {
+				const value = parseNum(controls[0].value);
+				results = [value === null ? null : Math.abs(value - a.value) <= (a.tolerance ?? 0.01)];
+			} else if (a.type === 'multinumeric') {
+				results = controls.map((control, part) => { const value = parseNum(control.value); return value === null ? null : Math.abs(value - a.values[part]) <= (a.tolerance ?? 0.01); });
+			} else if (a.type === 'text') {
+				const value = normalizeText(controls[0].value);
+				results = [value ? a.accept.map(normalizeText).includes(value) : null];
+			} else if (a.type === 'mc') {
+				results = [controls[0].value === '' ? null : Number(controls[0].value) === a.correct];
+			} else {
+				results = [controls[0].checked ? true : null];
+			}
+			const right = results.filter((result) => result === true).length, answered = results.filter((result) => result !== null).length;
+			correctParts += right; totalParts += results.length;
+			const full = right === results.length;
+			if (full) fullQuestions++;
+			const article = box.closest('.worksheet-question');
+			article.classList.toggle('worksheet-correct', full);
+			article.classList.toggle('worksheet-partial', !full && right > 0);
+			article.classList.toggle('worksheet-wrong', !full && answered > 0 && right === 0);
+			$('.worksheet-result', box).textContent = !answered ? 'Not answered' : full ? `Correct — ${right}/${results.length}` : `${right}/${results.length} correct`;
+		});
+		$('#worksheet-score').textContent = `${fullQuestions}/${state.worksheet.length} questions fully correct · ${correctParts}/${totalParts} checked answers correct`;
+		$('#worksheet-mark').textContent = 'Re-mark worksheet';
+	}
+
 	function createWorksheet() {
 		const candidates = pool();
 		if (!candidates.length) return;
@@ -276,6 +340,7 @@
 			compare(a.gen.subtopic, b.gen.subtopic) || a.gen.difficulty - b.gen.difficulty ||
 			a.q.marks - b.q.marks || compare(a.gen.id, b.gen.id));
 		const marks = entries.reduce((sum, entry) => sum + entry.q.marks, 0);
+		state.worksheet = entries;
 		const diagram = (q) => q.diagram ? `<figure class="diagram-wrap">${MG.diagram(q.diagram)}<figcaption>Diagram not to scale</figcaption></figure>` : '';
 		$('#worksheet-content').innerHTML = `<div class="worksheet-heading">
 			<p class="eyebrow">MATHGEN / WORKSHEET ${seed}</p><h1>${state.topic === 'All' ? 'Mixed' : state.topic} worksheet</h1>
@@ -289,11 +354,15 @@
 			${q.answer.type === 'mc' ? `<ol type="A" class="worksheet-choices">${q.answer.choices.map((c) => `<li>${c}</li>`).join('')}</ol>` : ''}
 			${q.answer.type === 'sketch' ? `<div class="diagram-wrap">${MG.diagram({ ...q.answer, type: 'graph', grid: true })}</div>` : ''}
 			<div class="working-space" aria-label="Space for working"></div>
+			${worksheetAnswer(q, i)}
 		</article>`).join('') + `<section id="worksheet-key" ${$('#worksheet-solutions').checked ? '' : 'hidden'}>
 			<h1>Worked solutions</h1><p>Answer key / worksheet ${seed}</p>` + entries.map(({ gen, q }, i) =>
 			`<article class="worksheet-solution"><h2>Question ${i + 1} · ${gen.subtopic}</h2>${q.solution}</article>`).join('') + '</section>';
 		$('#practice-page').hidden = true;
 		$('#worksheet-page').hidden = false;
+		$('#worksheet-mark').disabled = false;
+		$('#worksheet-mark').textContent = 'Mark worksheet';
+		$('#worksheet-score').textContent = '';
 		window.scrollTo(0, 0);
 		$('#worksheet-page').focus({ preventScroll: true });
 	}
@@ -720,6 +789,7 @@
 	});
 	$('#worksheet-solutions').addEventListener('change', (e) => { $('#worksheet-key').hidden = !e.target.checked; });
 	$('#worksheet-print').addEventListener('click', () => window.print());
+	$('#worksheet-mark').addEventListener('click', markWorksheet);
 	$('#subtopics').addEventListener('change', (e) => { state.subtopic = e.target.value; newQuestion(); });
 	$$('.diff-btn').forEach((b) => b.addEventListener('click', () => {
 		setDifficulty(Number(b.dataset.diff));

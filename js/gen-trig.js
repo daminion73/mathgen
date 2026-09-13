@@ -18,9 +18,9 @@ MG.generators = MG.generators || [];
 
 	add('trig-exact-shift-chain', 'Exact values', 2, (r) => {
 		const rows = [
-			[30, 120, 'sqrt(3)/4', F.frac(F.sqrt(3), 4)], [45, 135, '-1/2', `&minus;${F.frac(1, 2)}`],
-			[60, 150, '-3/4', `&minus;${F.frac(3, 4)}`], [120, 210, 'sqrt(3)/4', F.frac(F.sqrt(3), 4)],
-			[135, 240, 'sqrt(6)/8', F.frac(F.sqrt(6), 8)], [150, 315, '-sqrt(2)/8', `&minus;${F.frac(F.sqrt(2), 8)}`]
+			[30, 120, '-1/4', `&minus;${F.frac(1, 4)}`], [45, 135, '-1/2', `&minus;${F.frac(1, 2)}`],
+			[60, 150, '-3/4', `&minus;${F.frac(3, 4)}`], [120, 210, '-3/4', `&minus;${F.frac(3, 4)}`],
+			[135, 240, '-sqrt(2)/4', `&minus;${F.frac(F.sqrt(2), 4)}`], [150, 315, 'sqrt(2)/4', F.frac(F.sqrt(2), 4)]
 		];
 		const [a, b, key, shown] = r.pick(rows), k = r.pick([1, 2, 3]);
 		return { marks: 4, text: `(i) Write sin ${a}&deg; and cos ${b}&deg; exactly.<br>(ii) Hence evaluate ${k} sin ${a}&deg; cos ${b}&deg; exactly, divided by ${k}.`, answer: exact([key]), solution: `<p>Use reference angles and ASTC. The factor ${k} cancels.</p><p><strong>${shown}</strong>.</p>` };
@@ -67,8 +67,8 @@ MG.generators = MG.generators || [];
 	});
 
 	add('trig-two-bearing-elevation', 'Bearings and elevation', 3, (r) => {
-		const PA = r.int(50, 130), turn = r.int(50, 120), elev = r.int(20, 50), bearing = r.int(10, 100), PB = PA * Math.cos(rad(turn)), h = rnd(PB * Math.tan(rad(elev)), 2);
-		return { marks: 7, text: `A surveyor walks ${PA} m from P on a bearing of ${String(bearing).padStart(3, '0')}&deg;T to A. From A, the bearing of the foot B of a tower differs from AP by ${turn}&deg;, and AB is perpendicular to PB. The elevation of T from A is ${elev}&deg;.<br>(i) Find AB.<br>(ii) Hence find the tower height, correct to 2 decimal places.`, diagram: { type: 'bearings', legs: [{ bearing, dist: PA, label: `${PA} m` }, { bearing: bearing + 180 - turn, dist: Math.abs(PA * Math.sin(rad(turn))), label: 'AB' }], names: ['P', 'A', 'B'], close: true }, answer: { type: 'numeric', value: h, tolerance: 0.01, label: 'tower height (m), 2 d.p.' }, solution: `<p>In right triangle PAB, AB = ${rnd(Math.abs(PA * Math.sin(rad(turn))), 2)} m.</p><p>BT = AB tan ${elev}&deg; = <strong>${h} m</strong>.</p>` };
+		const PA = r.int(50, 130), turn = r.int(25, 75), elev = r.int(20, 50), bearing = r.int(10, 100), AB = PA * Math.cos(rad(turn)), h = rnd(AB * Math.tan(rad(elev)), 2);
+		return { marks: 7, text: `A surveyor walks ${PA} m from P on a bearing of ${String(bearing).padStart(3, '0')}&deg;T to A. From A, the bearing of the foot B of a tower differs from AP by ${turn}&deg;, and AB is perpendicular to PB. The elevation of T from A is ${elev}&deg;.<br>(i) Find AB.<br>(ii) Hence find the tower height, correct to 2 decimal places.`, diagram: { type: 'bearings', legs: [{ bearing, dist: PA, label: `${PA} m` }, { bearing: bearing + 180 - turn, dist: AB, label: 'AB' }], names: ['P', 'A', 'B'], close: true }, answer: { type: 'numeric', value: h, tolerance: 0.01, label: 'tower height (m), 2 d.p.' }, solution: `<p>In right triangle PAB, PA is the hypotenuse, so AB = ${PA} cos ${turn}&deg; = ${rnd(AB, 2)} m.</p><p>BT = AB tan ${elev}&deg; = <strong>${h} m</strong>.</p>` };
 	});
 
 	add('trig-solid-cuboid-angle', '3D trigonometry', 2, (r) => {
@@ -84,10 +84,11 @@ MG.generators = MG.generators || [];
 	});
 
 	add('trig-solid-tower-hill', '3D trigonometry', 3, (r) => {
-		const slope = r.int(8, 20), walk = r.int(35, 90), near = r.int(28, 50), far = r.int(12, near - 8);
-		const horizontal = walk * Math.cos(rad(slope)), rise = walk * Math.sin(rad(slope)), h = rnd(horizontal * Math.tan(rad(near)) - rise, 2);
-		const verts = { P: [0, 0, 0], Q: [horizontal, 0, rise], B: [horizontal + 18, 0, rise], T: [horizontal + 18, 0, rise + h], R: [0, 18, 0] };
-		return { marks: 8, text: `PQ is a straight path of length ${walk} m rising at ${slope}&deg;. From P and Q the angles of elevation of the top T of a vertical tower are ${far}&deg; and ${near}&deg; respectively.<br>(i) Resolve PQ horizontally and vertically.<br>(ii) Using the sightline from Q, find BT correct to 2 decimal places.<br>(iii) State how the sightline from P could check the result.`, diagram: solid(verts, [['P', 'Q', { accent: true, label: `${walk} m` }], ['Q', 'B'], ['B', 'T', { accent: true, label: 'h' }], ['P', 'T', { dash: true }], ['Q', 'T'], ['P', 'R', { dash: true }], ['R', 'B', { dash: true }]], { angles: [{ at: 'Q', from: 'B', to: 'T', label: `${near}&deg;`, r: 18 }, { at: 'P', from: 'Q', to: 'T', label: `${far}&deg;`, r: 20 }], rightAngles: [{ at: 'B', from: 'T', to: 'Q' }] }), answer: { type: 'numeric', value: h, tolerance: 0.01, label: 'BT (m), 2 d.p.' }, solution: `<p>Horizontal change = ${rnd(horizontal, 2)} m and rise = ${rnd(rise, 2)} m.</p><p>Relative to P's level, QT rises ${rnd(horizontal * Math.tan(rad(near)), 2)} m; subtract the path rise.</p><p><strong>BT = ${h} m</strong>. Substitute in the P triangle as a consistency check.</p>` };
+		const slope = r.int(8, 20), walk = r.int(35, 90), near = r.int(Math.max(28, slope + 12), 50), far = r.int(slope + 3, near - 8);
+		const horizontal = walk * Math.cos(rad(slope)), rise = walk * Math.sin(rad(slope));
+		const QB = (horizontal * Math.tan(rad(far)) - rise) / (Math.tan(rad(near)) - Math.tan(rad(far))), height = QB * Math.tan(rad(near)), h = rnd(height, 2);
+		const verts = { P: [0, 0, 0], Q: [horizontal, 0, rise], B: [horizontal + QB, 0, rise], T: [horizontal + QB, 0, rise + height], S: [horizontal + QB, 0, 0] };
+		return { marks: 8, text: `PQ is a straight path of length ${walk} m rising at ${slope}&deg;. The tower base B is level with Q and lies beyond Q in the same vertical plane. From P and Q the angles of elevation of the top T are ${far}&deg; and ${near}&deg; respectively.<br>(i) Resolve PQ horizontally and vertically.<br>(ii) Find QB and hence BT, correct to 2 decimal places.<br>(iii) Use the sightline from P to check the result.`, diagram: solid(verts, [['P', 'Q', { accent: true, label: `${walk} m` }], ['Q', 'B', { label: 'QB' }], ['B', 'T', { accent: true, label: 'h' }], ['P', 'T', { dash: true }], ['Q', 'T'], ['P', 'S', { dash: true }], ['S', 'B', { dash: true }]], { angles: [{ at: 'Q', from: 'B', to: 'T', label: `${near}&deg;`, r: 18 }, { at: 'P', from: 'S', to: 'T', label: `${far}&deg;`, r: 20 }], rightAngles: [{ at: 'B', from: 'T', to: 'Q' }] }), answer: { type: 'numeric', value: h, tolerance: 0.01, label: 'BT (m), 2 d.p.' }, solution: `<p>Horizontal change = ${rnd(horizontal, 2)} m and rise = ${rnd(rise, 2)} m.</p><p>Let QB = x. Then x tan ${near}&deg; = BT and (${rnd(horizontal, 2)} + x)tan ${far}&deg; = ${rnd(rise, 2)} + BT.</p><p>Solving gives x = ${rnd(QB, 2)} m and <strong>BT = ${h} m</strong>. Substitution in the equation from P confirms the result.</p>` };
 	});
 
 	add('trig-solid-pyramid-face', '3D trigonometry', 2, (r) => {
