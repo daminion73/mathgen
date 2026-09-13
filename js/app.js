@@ -6,6 +6,7 @@
 	const state = {
 		topic: 'All',
 		subtopic: 'All',
+		bossSubtopic: 'All',
 		difficulty: loadDifficulty(), // 0 = any; 4 = maximum
 		variety: loadVariety(),
 		seedCounter: Math.floor(Math.random() * 1e9),
@@ -185,6 +186,7 @@
 	function startPractice(topic) {
 		state.topic = topic;
 		state.subtopic = 'All';
+		state.bossSubtopic = 'All';
 		state.lastTopic = topic;
 		try { localStorage.setItem('mg-last-topic', topic); } catch { /* storage unavailable */ }
 		// A topic change must never inherit a restrictive filter from another test.
@@ -215,6 +217,7 @@
 		return MG.generators.filter((g) =>
 			(state.topic === 'All' || g.topic === state.topic) &&
 			(state.subtopic === 'All' || (state.topic === 'Boss' ? bossArea(g) : g.subtopic) === state.subtopic) &&
+			(state.topic !== 'Boss' || state.bossSubtopic === 'All' || g.subtopic === state.bossSubtopic) &&
 			(state.difficulty === 0 || g.difficulty === state.difficulty));
 	}
 
@@ -233,6 +236,18 @@
 		const subs = subtopicsFor(state.topic);
 		$('label[for="subtopics"]').textContent = state.topic === 'Boss' ? 'BOSS SUBJECT' : 'SUBTOPIC';
 		el.innerHTML = subs.map((s) => `<option value="${s}" ${s === state.subtopic ? 'selected' : ''}>${s === 'All' ? (state.topic === 'Boss' ? 'All Boss subjects' : 'All subtopics') : s}</option>`).join('');
+		renderBossSubtopics();
+	}
+
+	function renderBossSubtopics() {
+		const group = $('#boss-subtopic-group'), el = $('#boss-subtopics');
+		const visible = state.topic === 'Boss' && state.subtopic !== 'All';
+		group.hidden = !visible;
+		if (!visible) { state.bossSubtopic = 'All'; return; }
+		const subs = [...new Set(MG.generators.filter((g) => g.topic === 'Boss' && bossArea(g) === state.subtopic).map((g) => g.subtopic))].sort(compare);
+		if (!subs.includes(state.bossSubtopic)) state.bossSubtopic = 'All';
+		el.innerHTML = ['All', ...subs].map((s) => `<option value="${s}" ${s === state.bossSubtopic ? 'selected' : ''}>${s === 'All' ? 'All subtopics in subject' : s}</option>`).join('');
+		$('#boss-subtopic-name').textContent = state.bossSubtopic === 'All' ? '' : state.bossSubtopic;
 	}
 
 	function renderStats() {
@@ -790,7 +805,8 @@
 	$('#worksheet-solutions').addEventListener('change', (e) => { $('#worksheet-key').hidden = !e.target.checked; });
 	$('#worksheet-print').addEventListener('click', () => window.print());
 	$('#worksheet-mark').addEventListener('click', markWorksheet);
-	$('#subtopics').addEventListener('change', (e) => { state.subtopic = e.target.value; newQuestion(); });
+	$('#subtopics').addEventListener('change', (e) => { state.subtopic = e.target.value; state.bossSubtopic = 'All'; renderBossSubtopics(); newQuestion(); });
+	$('#boss-subtopics').addEventListener('change', (e) => { state.bossSubtopic = e.target.value; renderBossSubtopics(); newQuestion(); });
 	$$('.diff-btn').forEach((b) => b.addEventListener('click', () => {
 		setDifficulty(Number(b.dataset.diff));
 		newQuestion();
